@@ -1,0 +1,257 @@
+---
+title: "Workflow Hub for Automated Metagenomic Exploration (WHAM!)"
+author: "Ze Chen, Joseph Devlin, Kelly Ruggles"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+  html_document:
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{WHAM_vignette}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# 1. Introduction
+
+allowing for exploratory analysis of metagenomics and metatranscriptomic data based on ALDEx2. Includes visualization and statistical analysis on the gene family and taxa level.Wham can take over common metagenomics platform output(bioBakery, EBI) and 16s sequencing platform output(Qiime 2) and execute statistics differential tests(ALDEx2). Moreover, visualization functions such as barplot, heatmap, correlation and volcano plot are concluded in the package. Usually,purposes can be achieved within one line!
+
+# 2.Why is ALDEx2
+
+ALDEx2 estimates per-feature technical variation within each sample using Monte-Carlo instances drawn from the Dirichlet distribution. This distribution maintains the proportional nature of the data and returns a multivariate probability distribution. ALDEx2 uses the centred log-ratio (clr) transformation that ensures the data are scale invariant and sub-compositionally coherent9. The scale invariance property removes the need for a between sample data normalization step since the data are all placed on a consistent numerical co-ordinate. The sub-compositional coherence property ensures that the answers obtained are consistent when parts of the dataset are removed (e.g., removal of rRNA reads from RNA-seq studies or rare OTU species from 16S rRNA gene amplicon studies). All feature abundance values are expressed relative to the geometric mean abundance of all features in a sample. This is conceptually similar to a quantitative PCR where abundances are expressed relative to a standard: in the case of the clr transformation, the standard is the per-sample geometric mean abundance. See Aitchison (1986) for a complete description.
+
+# 3. Input data
+
+Because the format of ouput from different metagenomics platforms is somehow different from each other. To aviod unnecessary adjustment of format of count table, Wham is designed to have different functions to take over wham input. Therefore, Wham has a strict requirement for the format of the input table and when choosing different functions to input data, the requirement is different. Now, we have three different input functions(Biobakery, EBI and 16s count table), so we have 3 different requirement of format. The detailed format will be explained in related sections.
+
+## 3.1 requirement for the format from Biobakery workflow
+
+The requirement for Biobakery is that the first column has to be "ACC", the second column has to be "feature", and the third column has to be "taxa" (case insensitive). And the row name of count table is better to be blank.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(Wham)
+dir <-  system.file("extdata","biobakery_sample_input.tsv",package = "Wham")
+countdata <-  read.delim(dir)
+knitr::kable(countdata[1:5,1:5])
+```
+
+## 3.2 requirement for the format from EBI workflow
+
+EBI workflow produces 2 count tables. One table is for pathways/genes and the other is for taxa. The requirement for EBI feature output is that the first column has to be "Acc" and the second column has to be "feature", while in taxa count table, the first column has to be "taxa", and count start from the second column. feature count table is like this:
+
+```{r echo=FALSE}
+dir.feature <-  system.file("extdata","EBI_feature_input.tsv",package = "Wham")
+featuretable <-  read.delim(dir.feature)
+dir.taxa <-  system.file("extdata","EBI_taxa_input.tsv",package = "Wham")
+taxatable <-  read.delim(dir.taxa)
+knitr::kable(featuretable [1:5,1:5])
+```
+
+And taxa count table is like below(for the purpose of saving space taxonomic names were shortened):
+
+```{r echo=FALSE}
+taxatable_short = taxatable[1:5,1:5]
+taxatable_short$Taxa = gsub("archaeota|nobacteria|anobacteriales|anobacteriaceae|anobrevibacter|ethanobrevibacter|ethanosphaera","",taxatable_short$Taxa)
+knitr::kable(taxatable_short)
+```
+
+## 3.3 requirement for the format from 16s workflow
+
+You can input a count table like the format of EBI taxa count, and remember to keep row name blank. And we can also take over the object from phyloseq pakcage as well. Now we can't take over the direct export from Qiime 2(biom format files)
+
+```{r fig.height=5, fig.width=5, message=FALSE}
+dir <-  system.file("extdata","16s_phyloseq.rds",package = "Wham")
+phy_object = readRDS(dir)
+wham16s_object = WhamFrom16s(phyloseq_object =  phy_object)
+```
+
+## 3.4 input data
+
+As we demonstrated above, the format requirement is different according to the data sources. Yet, the rest of function arguments are very similar. Here we use the `WhamBiobakery` function as an example. In the process, you need input count table and metadata table. And then, `DE`(type of differentia analysis) has to be specified. The options of DE are "taxa" and "feature". "taxa" conducts the taxonomic differential analysis and "feature" conducts the bacterial functional differential analysis. When choosing "taxa", it is also recommended to specify the taxonomic rank level. In the metagenomics shotgun sequencing, the default value is `"s"`, while in 16s, it is `"otu"`.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+dir.data <-  system.file("extdata","biobakery_sample_input.tsv",package = "Wham")
+countData <-  read.delim(dir.data)
+countData <- countData[1:2000,] #we subset the count table to reduce computational cost, 
+
+dir.meta = system.file("extdata","biobakery_sample_metadata.csv",package = "Wham")
+metadata <- read.csv(dir.meta,row.names = 1)
+
+
+ wham_bbk <-  WhamBiobakery(countData = countData,
+                         colData = metadata,
+                         DE = "taxa",  ##required,choose taxa or feautre(gene family)
+                         design = ~ Location,    ##design formula to let function conduct tests on the group of interest,
+                         taxa.level = "s",  ##collapse the bacterial rank level when choosing DE as "taxa", default:"s"("speices")."otu" when analyze 16s,
+                         contrast = c("Location","Stool","Arm")  ##specify the comparison of interest: Stool(numerator) vs Arm(denominator) in 'Location' variable in metadata.
+                         )
+```
+
+### 3.4.1 contrast
+
+In the example above, we clarified the contrast argument as `c("Location","Stool","Arm")`. There are two other arguments:`ref.contrast` and `All.contrast`. All three arguments of the contrast can't coexist in the same function. `ref.contrast` conducts a serial of tests where all other elements are compared with the reference element. Therefore, ref.contrast needs two elements: the reference element and the variable in metadata. An example is this: `ref.contrast = c("Location","Arm")`. Such function will return three comparsions: Stool vs Arm; Vagina vs Arm, and Saliva vs Arm. `All.contrast` conducts all one to one comparison in the claimed variable. An example is: `All.contrast = "Location"`
+
+### 3.4.2 one way Anova
+
+Alternatively to the two-group test, the user can also perform "Kruskal Wallis" and "GLM" for one way Anova for more than two conditions. We can switch to Anova by setting the argument `aldex.module` as "glm". Then `glm.group`, which specifies the variable of interest, needs to be clarified or the last column in the metadata will be used as the input of `glm.group`. Please note when switching to Anova, the t.test related arguments like contrast can't be specified.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+wham_bbk_anova <-  WhamBiobakery(countData = countData,
+                         colData = metadata,
+                         DE = "taxa",  ##required,choose taxa or feautre(gene family)
+                         design = ~Location,    ##design formula to let function conduct tests on the group of interest,
+                         taxa.level = "s",  ##collapse the bacterial rank level when choosing DE as "taxa", default:"s"("speices")."otu" when analyze 16s,
+                         aldex.module = "anova"
+                         )
+```
+
+### 3.4.3 multi-factor complex design
+When more than one variable need be taken into consideration, user can add additional variable(s) to design via `+`. 
+Essentially, the complex design approach use a model matrix and covariates supplied to the glm function in R. The values returned are the expected values of the glm function given the inputs. More information can be found in ALDEx2 tutorial.
+```{r message=FALSE, warning=FALSE}
+set.seed(123)
+metadata$States = sample(c("LA","NY","CO"),47,replace = T)
+
+ wham_bbk_two_factor <-  WhamBiobakery(countData = countData,
+                         colData = metadata,
+                         DE = "feature",
+                         design = ~ Location + States,    ##complex design 
+                         )
+```
+
+### 3.4.4 other
+
+UseMC is the application of the package 'BiocParallel'. Now it only works in Mac and linux environments, not in the Windows environment. And the advanced usage will be released soon.
+
+# 4.output
+
+Differential test results are stored in a S4 object called "WhamResult", and can be retrieved by `@`. Detailed explanation can be found in the help page. When more than one comparison is conduct like `ref.contrast`, a tandem table containing multiple differential test results will be created and can be retrieved by `@`. Raw count table and metadata table are also stored in WhamResult".
+
+To better understand the ALDEx2 results, we sugget referring to the ALDEx2 vignette.
+
+# 5. visualization
+
+## 5.1 volcanoplot
+
+After the differential test, Wham can help users understand how significant via the volcano plot. The `effect` in the output of the ALDEx2 is used as the effect size, and the Benjamini-Hochberg corrected P value of Welch's t test(default) is used as the p value cutoff. Users can also choose other kinds of p value as the cutoff. When multiple comparisons are conducted, this function will return a list of volcano plots. The function was developed based on "EnhancedVolcano" package.
+
+```{r}
+VolcanoPlot(wham_bbk)
+```
+
+## 5.2 Taxa Barplot
+
+The taxonomic composition can be visualized in Wham. Here, there are three options: the composition for the whole bacterial community; the composition for the bacteria with statistic significance; the composition for the bacteria provided by the user. The three options are "all","DE.filter" and "custom" in the `fileter` argument respectively. The default choice is `"all"`, All taxonomic components are filtered at the threshold of relative abundance greater than 0.1%. This threshold can be adjusted in the argument `abundance_cutoff`. Please note that at the taxnomic compositional visualization, taxonomic rank level has to be specified in the argument `taxa.level`. Visualization functions will collapse the bacteria rank at the provided level. This visualization function is based on `ggplot` package and compatible with other ggplot related packages. Two examples are demonstrated below.
+
+```{r}
+TaxaBarPlot(wham_bbk,
+            filter = "all", 
+            display.number = 30, ## only visualize top 30 abundant bacteria
+            taxa.level = "g", ## visualiazation will be collapsed at "genues level"
+)
+```
+
+When setting `merge_group = T`, the samples belonging to the same group will be averaged.
+
+```{r}
+TaxaBarPlot(wham_bbk,
+            filter = "DE.filter", ## visualize based on statistics analysis
+            taxa.level = "g", ## all bacteria whose passed the statistic test will be collapsed at "genus level"
+            p.cutoff = 0.05,
+            effect.size.range = c(-1,1), ## setting appropriate range cutoff, the default range is c(0,0)
+            merge_group = T)
+```
+
+## 5.3 Taxa Heatmap
+
+There are also three options in TaxaHeatmap function:"all","DE.filter" and "custom". They have the same usage and meaning with Taxa Barplot function. Please refer to the previous part. In Taxa Heatmap, user can scale the data with "Z-score" by setting the argument `scale` as TRUE, or visualize the raw counts via setting this argument as FALSE. This function was developed based on "ComplexHeatmap" package and is compatible with all argument in the ComplexHeatmap::Heatmap.
+
+```{r}
+TaxaHeatmap(wham_bbk,
+            taxa.level = "s",
+            filter = "DE.filter",
+            effect.size.range = c(-0.5,0.5),
+            scale = T, ## default setting
+            column_split = c(rep("Arm",12),rep("Stool",12)), ## column_split is one of argument in Heatmap in ComplexHeatmap and compitle with other arguments; our demonstration comparison only contains 12 Arm samples and 11 Stool samples.
+            row_names_gp = grid::gpar(fontsize = 5)
+            )
+```
+
+```{r}
+TaxaHeatmap(wham_bbk,
+            taxa.level = "s",
+            filter = "DE.filter",
+            effect.size.range = c(-0.5,0.5),
+            scale = F, ## Using raw count
+            show_row_names = FALSE,
+            show_column_names = T)
+```
+
+## 5.3 FeatureHeatmap
+
+The usage of `FeatureHeatmap()` is more simple than TaxaHeatmap without specifying taxonomic rank information. Three options "all", "custom" and "DE.filter" are also implanted. There is also the `scale` argument and arguments from the ComplexHeatmap package.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+ wham_bbk_feature <-  WhamBiobakery(countData = countData,
+                         colData = metadata, ##required, choose feautre(gene family)
+                         DE = "feature",
+                         design = ~ Location,    ##design formula to let function conduct tests on the group of interest,
+                         ref.contrast = c("Location","Arm")
+                         )
+
+FeatureHeatmap(wham_bbk_feature,
+               filter = "DE.filter",
+               scale = T,
+               column_names_gp = grid::gpar(fontsize = 7))
+```
+
+## 5.4 FeatureCorr
+
+Functional pathway correlation exploration can be realized via the `FeatureCorr()`. This part helps users establish the correlation among genes. This function needs two kinds of information: features and samples. Users can claim them via function argument:`feature` and `group`as needed ,otherwise, user can use the features and samples from the differential analysis results. In the output plot, star sign means statistic significance. "*" \< 0.05,"**"\<0.01,"***" \< 0.001. Users can aslo choose correlation method and p value adjustment method as needed.
+
+```{r fig.height=6, fig.width=6}
+FeatureCorr(wham_bbk_feature,
+            UseDE.result = T, ## we use results from differential analysis
+            effect.size.range = c(-1.5,1.5),
+            )
+            
+```
+
+```{r echo=TRUE, fig.height=6, fig.width=6}
+feature_selection = wham_bbk_feature@DE.result$name[1:10] ##select first 10 pathways  
+sample_selection = rownames(wham_bbk@colData)[1:25] ##select fist 25 samples
+FeatureCorr(wham_bbk_feature,
+            feature = feature_selection,
+            group = sample_selection
+            )
+```
+
+```{r echo=TRUE}
+sessionInfo()
+```
+
+# 6.reference
+
+Fernandes, AD, Macklaim, JM, Linn, TG, Reid, G, Gloor, GB (2013). "\*\*\* ANOVA-Like Differential Gene Expression Analysis of Single-Organism and Meta-RNA-Seq." *\*\*\* PLoS ONE, 2013, volume 8, issue 7, e67019*. \<URL: \*\*\* [http://dx.doi.org/10.1371%2/journal.pone.0067019](http://dx.doi.org/10.1371%2/journal.pone.0067019){.uri}\>.
+
+Fernandes, D. A, Reid, J., Macklaim, M. J, McMurrough, T.A, Edgell, D.R., Gloor, B. G (2014). "\*\*\* Unifying the analysis of high-throughput sequencing datasets: characterizing RNA-seq, 16S rRNA gene sequencing and selective growth experiments by compositional data analysis." *\*\*\* Microbiome, 2014, volume 2, 15* . \<URL: \*\*\* [http://doi:10.1186/2049-2618-2-15](http://doi:10.1186/2049-2618-2-15){.uri}\>.
+
+Gloor GB, Macklaim JM, Fernandes AD (2016). "\*\*\* Displaying Variation in Large Datasets: a Visual Summary of Effect Sizes." *\*\*\* Journal of Computational and Graphical Statistics,* . \<URL: \*\*\* <http://dx.doi.org/10.1080/10618600.2015.1131161>\>.
+
+H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2016.
+
+Gu, Z. (2016) Complex heatmaps reveal patterns and correlations in multidimensional genomic data. Bioinformatics.
+
+phyloseq: An R package for reproducible interactive analysis and graphics of microbiome census data. Paul J. McMurdie and Susan Holmes (2013) PLoS ONE 8(4):e61217.
+
+Martin Morgan, Valerie Obenchain, Jim Hester and HervÃ© PagÃ¨s (2020). SummarizedExperiment: SummarizedExperiment container. R package version 1.20.0. <https://bioconductor.org/packages/SummarizedExperiment>

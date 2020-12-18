@@ -1,0 +1,33 @@
+Package: Wham
+Type: Package
+Title: Workflow Hub for Automated Metagenomic Exploration (WHAM!)
+Version: 0.1.0
+Author: Ze Chen, Joseph Devlin, Kelly Ruggles	
+Maintainer: Ze Chen <Ze.Chen@nyulangone.org>
+Description: R package allowing for exploratory analysis of metagenomics and metatranscriptomic data. Includes visualization and statistical analysis on the functional pathway and taxonomic abundance. 
+             This package is developped based on package ALDEx2.
+License: GPL-3
+Imports: ALDEx2,
+         SummarizedExperiment,
+         ggplot2,
+         tidyr,
+         cowplot,
+         ggpubr,
+         ComplexHeatmap,
+         circlize,
+         matrixStats,
+         psych,
+         methods,
+         EnhancedVolcano,
+         phyloseq,
+         grid
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.1
+Suggests: 
+    rmarkdown,
+    knitr,
+    grid
+VignetteBuilder: knitr
+URL: https://github.com/zc1286/Wham
+BugReports: https://github.com/zc1286/Wham/issues
