@@ -22,43 +22,28 @@ install.packages("Wham")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+A basic example: you can make differential analysis on metagenomic
+sequencing taxonomic and functional output.
 
 ``` r
 library(Wham)
-#> Registered S3 methods overwritten by 'ggalt':
-#>   method                  from   
-#>   grid.draw.absoluteGrob  ggplot2
-#>   grobHeight.absoluteGrob ggplot2
-#>   grobWidth.absoluteGrob  ggplot2
-#>   grobX.absoluteGrob      ggplot2
-#>   grobY.absoluteGrob      ggplot2
-## basic example code
+dir.data <-  system.file("extdata","biobakery_sample_input.tsv",package = "Wham")
+countData <-  read.delim(dir.data)
+countData <- countData[1:2000,] #we subset the count table to reduce computational cost, 
+
+dir.meta = system.file("extdata","biobakery_sample_metadata.csv",package = "Wham")
+metadata <- read.csv(dir.meta,row.names = 1)
+
+
+ wham_bbk <-  WhamBiobakery(countData = countData,
+                         colData = metadata,
+                         DE = "taxa",  ##required,choose taxa or feautre(gene family)
+                         design = ~ Location,    ##design formula to let function conduct tests on the group of interest,
+                         taxa.level = "s",  ##collapse the bacterial rank level when choosing DE as "taxa", default:"s"("speices")."otu" when analyze 16s,
+                         contrast = c("Location","Stool","Arm")  ##specify the comparison of interest: Stool(numerator) vs Arm(denominator) in 'Location' variable in metadata.
+                         )
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+You can also generate plots, for example:
 
-``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
-```
-
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this. You could also
-use GitHub Actions to re-render `README.Rmd` every time you push. An
-example workflow can be found here:
-<https://github.com/r-lib/actions/tree/master/examples>.
-
-You can also embed plots, for example:
-
-<img src="man/figures/README-pressure-1.png" width="100%" />
-
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+<img src="man/figures/README-pressure-1.png" width="100%" /><img src="man/figures/README-pressure-2.png" width="100%" />

@@ -30,25 +30,46 @@ install.packages("Wham")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+A basic example: you can make differential analysis on metagenomic sequencing taxonomic and functional output.
 
-```{r example}
+```{r example, message=FALSE, warning=FALSE}
 library(Wham)
-## basic example code
+dir.data <-  system.file("extdata","biobakery_sample_input.tsv",package = "Wham")
+countData <-  read.delim(dir.data)
+countData <- countData[1:2000,] #we subset the count table to reduce computational cost, 
+
+dir.meta = system.file("extdata","biobakery_sample_metadata.csv",package = "Wham")
+metadata <- read.csv(dir.meta,row.names = 1)
+
+
+ wham_bbk <-  WhamBiobakery(countData = countData,
+                         colData = metadata,
+                         DE = "taxa",  ##required,choose taxa or feautre(gene family)
+                         design = ~ Location,    ##design formula to let function conduct tests on the group of interest,
+                         taxa.level = "s",  ##collapse the bacterial rank level when choosing DE as "taxa", default:"s"("speices")."otu" when analyze 16s,
+                         contrast = c("Location","Stool","Arm")  ##specify the comparison of interest: Stool(numerator) vs Arm(denominator) in 'Location' variable in metadata.
+                         )
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
 
-```{r cars}
-summary(cars)
-```
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. You could also use GitHub Actions to re-render `README.Rmd` every time you push. An example workflow can be found here: <https://github.com/r-lib/actions/tree/master/examples>.
-
-You can also embed plots, for example:
+You can also generate plots, for example:
 
 ```{r pressure, echo = FALSE}
-plot(pressure)
+TaxaBarPlot(wham_bbk,
+            filter = "all", 
+            display.number = 30, ## only visualize top 30 abundant bacteria
+            taxa.level = "g", ## visualiazation will be collapsed at "genues level"
+)
+
+
+TaxaHeatmap(wham_bbk,
+            taxa.level = "s",
+            filter = "DE.filter",
+            effect.size.range = c(-0.5,0.5),
+            scale = T, ## default setting
+            column_split = c(rep("Arm",12),rep("Stool",12)), ## column_split is one of argument in Heatmap in ComplexHeatmap and compitle with other arguments; our demonstration comparison only contains 12 Arm samples and 11 Stool samples.
+            row_names_gp = grid::gpar(fontsize = 5)
+            )
 ```
 
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
