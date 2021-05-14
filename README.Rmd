@@ -16,6 +16,10 @@ knitr::opts_chunk$set(
 # Wham
 
 <!-- badges: start -->
+[![Travis build status](https://travis-ci.com/zc1286/Wham.svg?branch=master)](https://travis-ci.com/zc1286/Wham)
+[![R-CMD-check](https://github.com/zc1286/Wham/workflows/R-CMD-check/badge.svg)](https://github.com/zc1286/Wham/actions)
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/github/zc1286/Wham?branch=master&svg=true)](https://ci.appveyor.com/project/zc1286/Wham)
+[![Codecov test coverage](https://codecov.io/gh/zc1286/Wham/branch/master/graph/badge.svg)](https://codecov.io/gh/zc1286/Wham?branch=master)
 <!-- badges: end -->
 
 R package allowing for exploratory analysis of metagenomics and metatranscriptomic data. Includes visualization and statistical analysis on the functional pathway and taxonomic abundance. This package is developped based on package ALDEx2.
@@ -61,7 +65,6 @@ TaxaBarPlot(wham_bbk,
             display.number = 30, ## only visualize top 30 abundant bacteria
             taxa.level = "g", ## visualiazation will be collapsed at "genues level"
 )
-
 
 TaxaHeatmap(wham_bbk,
             taxa.level = "s",

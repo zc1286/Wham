@@ -27,7 +27,10 @@ RoxygenNote: 7.1.1
 Suggests: 
     rmarkdown,
     knitr,
-    grid
+    grid,
+    covr,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
 URL: https://github.com/zc1286/Wham
 BugReports: https://github.com/zc1286/Wham/issues
+Config/testthat/edition: 3

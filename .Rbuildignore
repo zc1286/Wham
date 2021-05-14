@@ -3,3 +3,7 @@
 ^Makefile$
 ^Jenkinsfile$
 ^README\.Rmd$
+^\.travis\.yml$
+^\.github$
+^appveyor\.yml$
+^codecov\.yml$

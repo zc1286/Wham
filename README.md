@@ -4,6 +4,14 @@
 # Wham
 
 <!-- badges: start -->
+
+[![Travis build
+status](https://travis-ci.com/zc1286/Wham.svg?branch=master)](https://travis-ci.com/zc1286/Wham)
+[![R-CMD-check](https://github.com/zc1286/Wham/workflows/R-CMD-check/badge.svg)](https://github.com/zc1286/Wham/actions)
+[![AppVeyor build
+status](https://ci.appveyor.com/api/projects/status/github/zc1286/Wham?branch=master&svg=true)](https://ci.appveyor.com/project/zc1286/Wham)
+[![Codecov test
+coverage](https://codecov.io/gh/zc1286/Wham/branch/master/graph/badge.svg)](https://codecov.io/gh/zc1286/Wham?branch=master)
 <!-- badges: end -->
 
 R package allowing for exploratory analysis of metagenomics and
